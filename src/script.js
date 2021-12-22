@@ -25,6 +25,9 @@ const galaxyParameters = {
   branches: 3,
   spin: 1,
   randomness: 1,
+  randomnessPower: 3,
+  insideColor: "#ff6030",
+  outsideColor: "#1b3984",
 };
 
 let geometry = null;
@@ -47,7 +50,12 @@ const generateGalaxy = () => {
   }
 
   geometry = new THREE.BufferGeometry();
+
+  const colorInside = new THREE.Color(galaxyParameters.insideColor);
+  const colorOutside = new THREE.Color(galaxyParameters.outsideColor);
+
   const positions = new Float32Array(galaxyParameters.count * 3);
+  const colors = new Float32Array(galaxyParameters.count * 3);
 
   for (let i = 0; i < galaxyParameters.count; i++) {
     const i3 = i * 3;
@@ -59,25 +67,39 @@ const generateGalaxy = () => {
       Math.PI *
       2;
 
+    // Positions
     const randomX =
-      (Math.random() - 0.5) * galaxyParameters.randomness * radius;
+      Math.pow(Math.random(), galaxyParameters.randomnessPower) *
+      (Math.random() < 0.5 ? -1 : 1);
     const randomY =
-      (Math.random() - 0.5) * galaxyParameters.randomness * radius;
+      Math.pow(Math.random(), galaxyParameters.randomnessPower) *
+      (Math.random() < 0.5 ? -1 : 1);
     const randomZ =
-      (Math.random() - 0.5) * galaxyParameters.randomness * radius;
+      Math.pow(Math.random(), galaxyParameters.randomnessPower) *
+      (Math.random() < 0.5 ? -1 : 1);
 
     positions[i3 + 0] = Math.cos(spinAngle + branchAngle) * radius + randomX;
     positions[i3 + 1] = 0 + randomY;
     positions[i3 + 2] = Math.sin(spinAngle + branchAngle) * radius + randomZ;
+
+    // Colors
+    const mixedColor = colorInside.clone();
+    mixedColor.lerp(colorOutside, radius / galaxyParameters.radius);
+
+    colors[i3 + 0] = mixedColor.r;
+    colors[i3 + 1] = mixedColor.g;
+    colors[i3 + 2] = mixedColor.b;
   }
 
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
+  geometry.setAttribute("color", new THREE.BufferAttribute(colors, 3));
 
   material = new THREE.PointsMaterial({
     size: galaxyParameters.size,
     sizeAttenuation: true,
     depthWrite: false,
     blending: THREE.AdditiveBlending,
+    vertexColors: true,
   });
 
   points = new THREE.Points(geometry, material);
@@ -104,6 +126,14 @@ gui.add(galaxyParameters, "spin", -5, 5, 0.001).onFinishChange(generateGalaxy);
 gui
   .add(galaxyParameters, "randomness", 0, 2, 0.001)
   .onFinishChange(generateGalaxy);
+
+gui
+  .add(galaxyParameters, "randomnessPower", 1, 10, 1)
+  .onFinishChange(generateGalaxy);
+
+gui.addColor(galaxyParameters, "insideColor").onFinishChange(generateGalaxy);
+
+gui.addColor(galaxyParameters, "outsideColor").onFinishChange(generateGalaxy);
 
 /**
  * Sizes
