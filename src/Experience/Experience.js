@@ -1,9 +1,23 @@
+import * as THREE from "three";
 import Camera from "./Camera";
+import Renderer from "./Renderer";
+import sources from "./sources.js";
+import Debug from "./Utils/Debug";
+import Resources from "./Utils/Resources";
 import Sizes from "./Utils/Sizes";
 import Time from "./Utils/Time";
+import World from "./World/World.js";
+
+let instance = null;
 
 export default class Experience {
   constructor(canvas) {
+    // ! USE *Singleton*
+    if (instance) {
+      return instance;
+    }
+    instance = this;
+
     // Enable to global access
     window.experience = this;
 
@@ -11,10 +25,14 @@ export default class Experience {
     this.canvas = canvas;
 
     // Setup
+    this.debug = new Debug();
     this.sizes = new Sizes();
     this.time = new Time();
     this.scene = new THREE.Scene();
+    this.resources = new Resources(sources);
     this.camera = new Camera();
+    this.renderer = new Renderer();
+    this.world = new World();
 
     this.sizes.on("resize", () => {
       // on Canvas Resize Event
@@ -27,7 +45,36 @@ export default class Experience {
     });
   }
 
-  resize() {}
+  resize() {
+    this.camera.resize();
+    this.renderer.resize();
+  }
 
-  update() {}
+  update() {
+    this.camera.update();
+    this.world.update();
+    this.renderer.update();
+  }
+
+  destroy() {
+    this.sizes.off("resize");
+    this.time.off("tick");
+
+    this.scene.traverse((child) => {
+      if (child instanceof THREE.Mesh) {
+        child.geometry.dispose();
+
+        for (const key in child.material) {
+          const value = child.material[key];
+
+          typeof value?.dispose === "function" && value.dispose();
+        }
+      }
+    });
+
+    this.camera.controls.dispose();
+    this.renderer.instance.dispose();
+
+    this.debug.active && this.debug.ui.destroy();
+  }
 }
